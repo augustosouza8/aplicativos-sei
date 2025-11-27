@@ -302,8 +302,6 @@ def parse_documentos_do_iframe(
                 if href_visualizacao:
                     doc.visualizacao_url = absolute_to_sei(settings, href_visualizacao)
 
-    from .processes import extrair_hash_da_url  # import tardio para evitar ciclo
-
     for match in RE_INFRA_ACAO.finditer(script_text):
         args_raw = match.group("args")
         args = _parse_infra_args(args_raw)

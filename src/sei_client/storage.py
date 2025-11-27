@@ -39,15 +39,32 @@ def processo_para_dict(processo: Processo) -> Dict[str, Any]:
     }
 
 
-def carregar_historico_processos(settings: Settings, caminho: Optional[Path] = None) -> Dict[str, Dict[str, Any]]:
-    """Lê o histórico salvo de processos a partir de um arquivo JSON, se existir."""
-    path = Path(caminho or settings.historico_path).expanduser()
+def carregar_historico_processos(settings: Optional[Settings] = None, caminho: Optional[Path] = None) -> Dict[str, Dict[str, Any]]:
+    """
+    Lê o histórico salvo de processos a partir de um arquivo JSON, se existir.
+    
+    Args:
+        settings: Configurações do SEI (opcional, usado apenas se caminho não for fornecido).
+        caminho: Caminho específico do arquivo de histórico (opcional).
+    
+    Returns:
+        Dicionário com histórico de processos (preserva campos extras como _metadata).
+    """
+    if caminho:
+        path = Path(caminho).expanduser()
+    elif settings:
+        path = Path(settings.historico_path).expanduser()
+    else:
+        log.warning("É necessário fornecer settings ou caminho para carregar histórico.")
+        return {}
+    
     if not path.exists():
         return {}
     try:
         with path.open("r", encoding="utf-8") as handle:
             data = json.load(handle)
         if isinstance(data, dict):
+            # Preserva todos os campos, incluindo _metadata e outros extras
             return data
         log.warning("Formato inesperado no histórico %s; retornando vazio.", path)
     except Exception as exc:

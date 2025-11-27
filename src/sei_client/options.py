@@ -11,12 +11,8 @@ from .config import Settings, _str_to_bool
 from .models import EnrichmentOptions, FilterOptions, PDFDownloadOptions, PaginationOptions
 
 
-def parse_cli_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
-    """Constrói o parser e interpreta os argumentos CLI disponíveis."""
-    parser = argparse.ArgumentParser(
-        description="Acessa o SEI, lista processos e gera PDF do primeiro processo filtrado.",
-    )
-
+def _add_processos_args(parser: argparse.ArgumentParser) -> None:
+    """Adiciona argumentos do comando de processamento de processos ao parser."""
     vis_group = parser.add_mutually_exclusive_group()
     vis_group.add_argument(
         "--filtro-visualizados",
@@ -185,7 +181,42 @@ def parse_cli_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
         help="Número de tentativas por processo (default: 3).",
     )
 
-    return parser.parse_args(argv)
+
+def parse_cli_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
+    """Constrói o parser e interpreta os argumentos CLI disponíveis."""
+    parser = argparse.ArgumentParser(
+        description="Cliente SEI: acessa processos, gera relatórios e automatiza tarefas.",
+    )
+    
+    # Adicionar subparsers para comandos
+    subparsers = parser.add_subparsers(dest="comando", help="Comandos disponíveis")
+    
+    # Comando padrão (processos) - mantém compatibilidade com uso atual
+    parser_processos = subparsers.add_parser(
+        "processos",
+        help="Lista e processa processos do SEI (comando padrão)",
+        description="Acessa o SEI, lista processos e gera PDF do primeiro processo filtrado.",
+    )
+    _add_processos_args(parser_processos)
+    
+    # Comando relatorio-diario
+    subparsers.add_parser(
+        "relatorio-diario",
+        help="Gera relatório diário automatizado de processos do SEI",
+        description="Executa relatório diário: identifica processos novos/atualizados, baixa PDFs e envia por e-mail.",
+    )
+    
+    # Por padrão, se nenhum subcomando for fornecido, tratar como "processos"
+    # para manter compatibilidade com uso atual (adicionar argumentos ao parser principal também)
+    _add_processos_args(parser)
+    
+    args = parser.parse_args(argv)
+    
+    # Se nenhum subcomando foi fornecido, definir como "processos" para compatibilidade
+    if args.comando is None:
+        args.comando = "processos"
+    
+    return args
 
 
 def _parse_list_argument(cli_values: Optional[List[str]], env_value: Optional[str]) -> List[str]:

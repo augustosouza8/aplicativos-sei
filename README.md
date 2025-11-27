@@ -281,6 +281,17 @@ uv pip list
 | `SEI_PDF_PARALELO` | `true` habilita modo paralelo | ❌ Não | - |
 | `SEI_PDF_WORKERS` | Número de workers no modo paralelo | ❌ Não | 3 |
 | `SEI_PDF_RETRIES` | Tentativas por processo no download em lote | ❌ Não | 3 |
+| `SEI_REL_MAX_PROCESSOS_NOVOS_DIA` | Máximo de processos novos a analisar por dia | ❌ Não | 10 |
+| `SEI_REL_MAX_TAMANHO_PDF_MB` | Tamanho máximo de PDF em MB para considerar válido | ❌ Não | 100 |
+| `SEI_REL_XLSX_PATH` | Caminho do arquivo XLSX do relatório diário | ❌ Não | `saida/relatorio_diario.xlsx` |
+| `SEI_REL_PDF_DIR` | Diretório para salvar PDFs do relatório diário | ❌ Não | `pdfs/relatorio_diario` |
+| `SEI_REL_EMAIL_FROM` | E-mail remetente do relatório diário | ❌ Não | - |
+| `SEI_REL_EMAIL_TO` | Lista CSV de destinatários do relatório | ❌ Não | - |
+| `SEI_REL_SMTP_HOST` | Servidor SMTP para envio de e-mail | ❌ Não | - |
+| `SEI_REL_SMTP_PORT` | Porta do servidor SMTP | ❌ Não | 587 |
+| `SEI_REL_SMTP_USER` | Usuário para autenticação SMTP | ❌ Não | - |
+| `SEI_REL_SMTP_PASS` | Senha para autenticação SMTP | ❌ Não | - |
+| `SEI_REL_SMTP_USE_TLS` | `true` habilita TLS para SMTP | ❌ Não | true |
 
 ## 🎯 Exemplo de Uso
 
@@ -401,3 +412,103 @@ uv run acessar_processos_sei.py \
 - Seleciona os processos conforme filtros e gera PDFs para até 10 processos
 - Salva os arquivos no diretório informado e apresenta resumo de sucessos/falhas
 - Use `--pdf-paralelo --pdf-workers 4` para habilitar downloads paralelos (cada worker abre nova sessão)
+
+### Relatório Diário por E-mail (POC Local)
+
+O sistema de relatórios diários automatizados permite gerar e enviar relatórios por e-mail com processos novos e atualizados do SEI.
+
+#### Primeira Execução (Baseline)
+
+Na primeira execução, o sistema:
+- Coleta todos os processos da unidade (Recebidos + Gerados)
+- Enriquece com metadados de documentos
+- Cria um histórico completo como baseline
+- Gera planilha Excel com todos os processos
+- Envia e-mail de cadastro inicial com a planilha anexada
+
+#### Execuções Seguintes
+
+Nas execuções seguintes, o sistema:
+- Identifica processos novos (ausentes no histórico anterior)
+- Identifica processos atualizados (mudanças em documentos, marcadores, indicadores, etc.)
+- Aplica limites configuráveis (número máximo de processos novos, tamanho máximo de PDF)
+- Baixa PDFs dos processos selecionados (novos + atualizados)
+- Atualiza o histórico com metadata de datas
+- Gera planilha Excel com todos os processos e colunas de status
+- Envia e-mail estruturado com seções para novos, atualizados e não analisados
+
+#### Configuração
+
+Configure as variáveis de ambiente necessárias:
+
+```bash
+# Configurações obrigatórias (já existentes)
+export SEI_USER="seu_login"
+export SEI_PASS="sua_senha"
+export SEI_ORGAO="28"
+export SEI_UNIDADE="SEPLAG/AUTOMATIZAMG"
+
+# Configurações do relatório diário
+export SEI_REL_MAX_PROCESSOS_NOVOS_DIA=10  # Máximo de processos novos a analisar por dia
+export SEI_REL_MAX_TAMANHO_PDF_MB=100      # Tamanho máximo de PDF em MB
+export SEI_REL_XLSX_PATH="saida/relatorio_diario.xlsx"  # Caminho da planilha
+export SEI_REL_PDF_DIR="pdfs/relatorio_diario"          # Diretório dos PDFs
+
+# Configurações de e-mail (obrigatórias para envio)
+export SEI_REL_EMAIL_FROM="seu_email@exemplo.com"
+export SEI_REL_EMAIL_TO="destinatario1@exemplo.com,destinatario2@exemplo.com"  # Lista CSV
+export SEI_REL_SMTP_HOST="smtp.exemplo.com"
+export SEI_REL_SMTP_PORT="587"
+export SEI_REL_SMTP_USER="usuario_smtp"
+export SEI_REL_SMTP_PASS="senha_smtp"
+export SEI_REL_SMTP_USE_TLS="true"  # default: true
+```
+
+#### Execução
+
+```bash
+# Executar relatório diário
+uv run sei-client relatorio-diario
+```
+
+Ou usando o comando legado:
+```bash
+uv run acessar_processos_sei.py relatorio-diario
+```
+
+**Nota:** Na primeira execução, o sistema criará o histórico baseline. Nas execuções seguintes, identificará apenas processos novos/atualizados.
+
+#### Estrutura do E-mail
+
+O e-mail enviado contém:
+- **Seção 1:** Processos novos (identificados desde o último relatório)
+- **Seção 2:** Processos atualizados (com mudanças em documentos, marcadores, etc.)
+- **Seção 3:** Processos não analisados (excederam limites de tamanho ou quantidade)
+
+A planilha Excel anexada contém todos os processos da unidade com colunas indicando:
+- `É Novo Desde Último Relatório`
+- `Teve Atualização Desde Último Relatório`
+- `Ignorado Por Limite`
+- `PDF Baixado`
+- `Motivo Não Analisado`
+
+**Observação:** Esta é uma PoC local. O usuário deve executar o comando manualmente (por exemplo, uma vez ao dia). Futuramente, poderá ser agendado via cron/Agendador de Tarefas. Resumos automáticos com LLM ainda não estão implementados nesta fase.
+
+#### Guia Completo
+
+Para um guia detalhado passo a passo sobre como configurar e usar o relatório diário, consulte: **[docs/guia_relatorio_diario.md](docs/guia_relatorio_diario.md)**
+
+#### Testar Configurações Antes de Executar
+
+Antes de executar o relatório pela primeira vez, você pode testar suas configurações:
+
+```bash
+# Testar configurações (verifica SEI, SMTP, caminhos, etc.)
+python scripts/testar_config_relatorio.py
+```
+
+Este script verifica:
+- Configurações obrigatórias do SEI
+- Configurações do relatório diário
+- Conexão SMTP (sem enviar e-mail)
+- Validade do histórico existente

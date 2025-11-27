@@ -16,6 +16,7 @@ from .options import (
     build_pagination_options,
     parse_cli_args,
 )
+from .relatorio_diario import load_daily_report_settings, run_daily_report
 
 log = logging.getLogger("sei-client")
 
@@ -23,6 +24,18 @@ log = logging.getLogger("sei-client")
 def run(argv: Optional[list[str]] = None) -> int:
     """Executa o fluxo principal da CLI: login, filtros, enriquecimento e PDFs."""
     args = parse_cli_args(argv)
+    
+    # Tratar subcomando relatorio-diario
+    if args.comando == "relatorio-diario":
+        try:
+            settings = load_daily_report_settings()
+            run_daily_report(settings)
+            return 0
+        except Exception as exc:
+            log.exception("Erro inesperado ao executar relatório diário: %s", exc)
+            return 99
+    
+    # Comando padrão: processamento de processos
     settings = load_settings()
     client = SeiClient(settings=settings)
 

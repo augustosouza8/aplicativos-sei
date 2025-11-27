@@ -12,6 +12,7 @@ from .models import (
     PaginationOptions,
     Processo,
 )
+from .relatorio_diario import DailyReportSettings, load_daily_report_settings, run_daily_report
 from .storage import carregar_historico_processos, exportar_processos_para_excel, salvar_historico_processos
 
 __all__ = [
@@ -30,5 +31,8 @@ __all__ = [
     "carregar_historico_processos",
     "salvar_historico_processos",
     "exportar_processos_para_excel",
+    "DailyReportSettings",
+    "load_daily_report_settings",
+    "run_daily_report",
 ]
 
