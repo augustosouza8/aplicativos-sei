@@ -199,28 +199,29 @@ def _identificar_processos_novos_e_atualizados(
             # Verificar se houve atualizações
             atualizado = False
 
-            # Novos documentos
+            # Novos documentos (comparação por ID - detecta documentos realmente novos)
             docs_anteriores_ids = {doc.get("id_documento") for doc in historico_proc.get("documentos", [])}
             docs_atuais_ids = {doc.id_documento for doc in processo.documentos}
             if docs_atuais_ids - docs_anteriores_ids:
                 atualizado = True
 
-            # Documentos marcados como novos
-            if any(doc.eh_novo for doc in processo.documentos):
-                atualizado = True
+            # NOTA: Removida verificação de doc.eh_novo porque esse campo indica
+            # status do SEI (ex: não visualizado), não se o documento é novo desde
+            # o último relatório. A comparação de IDs acima já detecta documentos
+            # realmente novos corretamente.
 
-            # Mudanças em marcadores
-            marcadores_anteriores = set(historico_proc.get("marcadores", []))
-            marcadores_atuais = set(processo.marcadores)
+            # Mudanças em marcadores (normaliza strings vazias para comparação correta)
+            marcadores_anteriores = {m for m in historico_proc.get("marcadores", []) if m and m.strip()}
+            marcadores_atuais = {m for m in processo.marcadores if m and m.strip()}
             if marcadores_anteriores != marcadores_atuais:
                 atualizado = True
 
-            # Mudanças em indicadores
-            if (
-                historico_proc.get("tem_documentos_novos") != processo.tem_documentos_novos
-                or historico_proc.get("tem_anotacoes") != processo.tem_anotacoes
-            ):
-                atualizado = True
+            # NOTA: Removida verificação de tem_documentos_novos e tem_anotacoes porque
+            # esses campos são estados do SEI (indicadores visuais), não mudanças desde
+            # o último relatório. Novos documentos já são detectados pela comparação de
+            # IDs acima. Esses campos podem mudar mesmo sem mudanças reais (ex: se
+            # alguém visualizou documentos, tem_documentos_novos muda de True para False,
+            # mas isso não indica uma atualização desde o último relatório).
 
             # Mudanças em assinantes
             assinantes_anteriores = set(historico_proc.get("assinantes", []))
