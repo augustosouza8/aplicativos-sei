@@ -1,4 +1,4 @@
-# Tests API SEI
+# Tests SEI com disparo de relatórios via emails
 
 Projeto para interagir com o sistema SEI (Sistema Eletrônico de Informações) do Governo de Minas Gerais.
 
